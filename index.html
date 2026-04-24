@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creative Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Geologica:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #0b0c10;
+  --s1: #13141a;
+  --s2: #1a1b24;
+  --s3: #22232e;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8e8f0;
+  --muted: rgba(232,232,240,0.42);
+  --hint: rgba(232,232,240,0.22);
+  --accent: #d4f54e;
+  --accent-dim: rgba(212,245,78,0.12);
+
+  --c0: #4a3fff; --c0bg: rgba(74,63,255,0.12); --c0t: #a09bff;
+  --c1: #ff9d3d; --c1bg: rgba(255,157,61,0.12); --c1t: #ffbf7a;
+  --c2: #3db8ff; --c2bg: rgba(61,184,255,0.12); --c2t: #80cfff;
+  --c3: #ff4fa8; --c3bg: rgba(255,79,168,0.12); --c3t: #ff90c8;
+  --c4: #ff3d3d; --c4bg: rgba(255,61,61,0.12); --c4t: #ff8080;
+  --c5: #3dff8f; --c5bg: rgba(61,255,143,0.12); --c5t: #80ffb8;
+
+  --r: 10px;
+  --rl: 14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  min-height: 100vh;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ─── BACKGROUND GRID ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 52px 52px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── SCREENS ─── */
+.screen { display: none; position: relative; z-index: 1; }
+.screen.active { display: block; }
+
+/* ─── AUTH SCREEN ─── */
+#authScreen {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+#authScreen.active { display: flex; }
+
+.auth-box {
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 400px;
+  animation: fadeUp .3s ease;
+}
+.auth-logo {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.5px;
+}
+.auth-logo span { color: var(--accent); }
+.auth-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+.auth-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--s2);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 1.5rem;
+}
+.auth-tab {
+  flex: 1;
+  height: 34px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.auth-tab.active {
+  background: var(--s3);
+  color: var(--text);
+}
+.auth-field { margin-bottom: 1rem; }
+.auth-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 6px;
+}
+.auth-field input {
+  width: 100%;
+  height: 42px;
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 0 14px;
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  transition: border-color .15s;
+}
+.auth-field input:focus { outline: none; border-color: var(--accent); }
+.auth-field input::placeholder { color: var(--hint); }
+.btn-primary {
+  width: 100%;
+  height: 44px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r);
+  color: #0a0b0e;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  margin-top: .5rem;
+}
+.btn-primary:hover { opacity: .88; }
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.auth-err {
+  font-size: 12px;
+  color: var(--c4t);
+  background: var(--c4bg);
+  border: 1px solid rgba(255,61,61,.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 1rem;
+  display: none;
+}
+.auth-err.show { display: block; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 2rem;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11,12,16,.8);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-logo {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.3px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.topbar-logo span { color: var(--accent); }
+.topbar-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; }
+.topbar-project {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.topbar-project b { color: var(--text); font-weight: 500; }
+.topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.topbar-user {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.btn-ghost {
+  height: 32px;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--muted);
+  font-family: 'Geologica', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-ghost:hover { background: var(--s2); color: var(--text); }
+
+/* ─── PROJECTS SCREEN ─── */
+#projectsScreen { animation: fadeUp .25s ease; }
+
+.page-header {
+  padding: 2rem 2rem 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.5px;
+}
+.page-title span { color: var(--accent); }
+
+.add-project-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 2rem 1.5rem;
+}
+.add-project-row input {
+  flex: 1;
+  max-width: 380px;
+  height: 40px;
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 0 14px;
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  transition: border-color .15s;
+}
+.add-project-row input::placeholder { color: var(--hint); }
+.add-project-row input:focus { outline: none; border-color: var(--accent); }
+.btn-accent {
+  height: 40px;
+  padding: 0 18px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r);
+  color: #0a0b0e;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.btn-accent:hover { opacity: .85; }
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  padding: 0 2rem 3rem;
+}
+
+.project-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s, background .15s;
+  animation: fadeUp .2s ease both;
+  position: relative;
+  overflow: hidden;
+}
+.project-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.project-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.project-card:hover::before { opacity: 1; }
+.project-card-name {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.project-card-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.project-card-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.proj-stat {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-weight: 500;
+}
+.proj-stat-total { background: var(--s3); color: var(--muted); }
+.proj-stat-done { background: var(--c5bg); color: var(--c5t); }
+.proj-stat-wip { background: var(--c2bg); color: var(--c2t); }
+.project-card-del {
+  position: absolute;
+  top: 12px; right: 12px;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: all .15s;
+}
+.project-card:hover .project-card-del { opacity: 1; }
+.project-card-del:hover { border-color: rgba(255,61,61,.3); background: var(--c4bg); color: var(--c4t); }
+
+.projects-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--hint);
+  font-size: 14px;
+}
+
+/* ─── BOARD SCREEN ─── */
+#boardScreen { animation: fadeUp .25s ease; }
+
+.board-header {
+  padding: 1.25rem 2rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 32px;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'Geologica', sans-serif;
+  flex-shrink: 0;
+}
+.back-btn:hover { background: var(--s2); color: var(--text); }
+.board-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.3px;
+  flex: 1;
+}
+.board-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.board-stat {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+.board-stat b { color: var(--text); }
+
+.add-card-bar {
+  display: flex;
+  gap: 8px;
+  padding: 1rem 2rem;
+}
+.add-card-bar input {
+  flex: 1;
+  max-width: 400px;
+  height: 40px;
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 0 14px;
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  transition: border-color .15s;
+}
+.add-card-bar input::placeholder { color: var(--hint); }
+.add-card-bar input:focus { outline: none; border-color: var(--accent); }
+
+/* ─── KANBAN BOARD ─── */
+.board-wrap {
+  padding: 0 2rem 3rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(210px, 1fr));
+  gap: 12px;
+  min-width: 1300px;
+  padding-top: 1rem;
+}
+
+.col {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.col-head {
+  padding: 12px 14px 11px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.col-accent { width: 3px; height: 18px; border-radius: 10px; flex-shrink: 0; }
+.col-0 .col-accent { background: var(--c0); }
+.col-1 .col-accent { background: var(--c1); }
+.col-2 .col-accent { background: var(--c2); }
+.col-3 .col-accent { background: var(--c3); }
+.col-4 .col-accent { background: var(--c4); }
+.col-5 .col-accent { background: var(--c5); }
+.col-label {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  flex: 1;
+  line-height: 1.3;
+}
+.col-0 .col-label { color: var(--c0t); }
+.col-1 .col-label { color: var(--c1t); }
+.col-2 .col-label { color: var(--c2t); }
+.col-3 .col-label { color: var(--c3t); }
+.col-4 .col-label { color: var(--c4t); }
+.col-5 .col-label { color: var(--c5t); }
+.col-count {
+  font-size: 11px;
+  color: var(--hint);
+  background: var(--bg);
+  border-radius: 100px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.col-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+.empty-col {
+  font-size: 11px;
+  color: var(--hint);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ─── CARD ─── */
+.card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+  transition: border-color .15s, transform .15s;
+  animation: fadeUp .2s ease;
+}
+.card:hover { border-color: var(--border2); transform: translateY(-1px); }
+
+.card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+.card-date {
+  font-size: 10px;
+  color: var(--hint);
+  margin-bottom: 8px;
+}
+.card-comment {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--c2t);
+  background: var(--c2bg);
+  border-radius: 5px;
+  padding: 3px 8px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-link:hover { opacity: .8; }
+.card-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.card-btn {
+  font-size: 10px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Geologica', sans-serif;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.card-btn:hover { background: var(--s3); color: var(--text); }
+.card-btn-edit { margin-left: auto; }
+.card-btn-del { color: rgba(255,80,80,.5) !important; border-color: rgba(255,80,80,.15) !important; }
+.card-btn-del:hover { background: var(--c4bg) !important; color: var(--c4t) !important; }
+
+/* ─── MODAL ─── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,5,8,.78);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 440px;
+  animation: fadeUp .2s ease;
+}
+.modal-name {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field { margin-bottom: 1rem; }
+.field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  margin-bottom: 6px;
+}
+.field input, .field select, .field textarea {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  transition: border-color .15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.field input::placeholder, .field textarea::placeholder { color: var(--hint); }
+.field select option { background: var(--s2); }
+.field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+.modal-btns button {
+  height: 38px; padding: 0 18px;
+  border-radius: 8px;
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-cancel { background: transparent; border: 1px solid var(--border2); color: var(--muted); }
+.btn-cancel:hover { color: var(--text); }
+.btn-save { background: var(--accent); border: none; color: #0a0b0e; font-weight: 600; }
+.btn-save:hover { opacity: .85; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: 1.5rem; left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--s3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  border-radius: 100px;
+  padding: 10px 22px;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity .2s, transform .2s;
+  z-index: 300;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── LOADER ─── */
+#loader {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+  flex-direction: column;
+  gap: 1rem;
+}
+#loader .l-logo {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+#loader .l-logo span { color: var(--accent); }
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 600px) {
+  .topbar { padding: 0 1rem; }
+  .page-header, .add-project-row, .projects-grid, .board-header, .add-card-bar, .board-wrap { padding-left: 1rem; padding-right: 1rem; }
+  .topbar-user { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="l-logo">Creative<span>.</span></div>
+  <div class="spinner"></div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="screen">
+  <div class="auth-box">
+    <div class="auth-logo">Creative<span>.</span>Tracker</div>
+    <div class="auth-sub">Управление рекламными креативами</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Войти</button>
+      <button class="auth-tab" onclick="switchTab('register')">Регистрация</button>
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+    </div>
+    <div class="auth-field">
+      <label>Пароль</label>
+      <input id="authPassword" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" id="authBtn" onclick="doAuth()">Войти</button>
+  </div>
+</div>
+
+<!-- MAIN WRAPPER (topbar + screens) -->
+<div id="mainWrap" style="display:none">
+  <div class="topbar">
+    <div class="topbar-logo" onclick="showProjects()">Creative<span>.</span></div>
+    <div class="topbar-sep" id="topSep" style="display:none"></div>
+    <div class="topbar-project" id="topProject" style="display:none"></div>
+    <div class="topbar-right">
+      <div class="topbar-user" id="topUser"></div>
+      <button class="btn-ghost" onclick="logout()">Выйти</button>
+    </div>
+  </div>
+
+  <!-- PROJECTS SCREEN -->
+  <div id="projectsScreen" class="screen active">
+    <div class="page-header">
+      <div class="page-title">Мои проекты<span>.</span></div>
+    </div>
+    <div class="add-project-row">
+      <input id="newProjectName" placeholder="Название нового проекта..." autocomplete="off" />
+      <button class="btn-accent" onclick="addProject()">+ Проект</button>
+    </div>
+    <div id="projectsGrid" class="projects-grid"></div>
+  </div>
+
+  <!-- BOARD SCREEN -->
+  <div id="boardScreen" class="screen">
+    <div class="board-header">
+      <button class="back-btn" onclick="showProjects()">← Проекты</button>
+      <div class="board-title" id="boardTitle"></div>
+      <div class="board-stats" id="boardStats"></div>
+    </div>
+    <div class="add-card-bar">
+      <input id="newCardName" placeholder="Название препарата / креатива..." autocomplete="off" />
+      <button class="btn-accent" onclick="addCard()">+ Добавить</button>
+    </div>
+    <div class="board-wrap">
+      <div id="board" class="board"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CARD MODAL -->
+<div id="overlay" class="overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-name" id="modalName"></div>
+    <div class="field">
+      <label>Название</label>
+      <input id="mName" />
+    </div>
+    <div class="field">
+      <label>Этап</label>
+      <select id="mStatus">
+        <option value="0">✏️ Написание ТЗ</option>
+        <option value="1">🔍 Согласование ТЗ с ПМ</option>
+        <option value="2">🎨 В работе у дизайнера</option>
+        <option value="3">👁 Согласование с клиентом</option>
+        <option value="4">🔄 Правки от клиента</option>
+        <option value="5">🚀 Запущен</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Ссылка на готовый креатив</label>
+      <input id="mLink" placeholder="https://..." />
+    </div>
+    <div class="field">
+      <label>Комментарий</label>
+      <textarea id="mComment" placeholder="Заметки, детали..."></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn-save" onclick="saveModal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG — ЗАМЕНИ НА СВОИ ДАННЫЕ ───
+const SUPABASE_URL = 'https://fbjvlgtfaecxzdmrnaem.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianZsZ3RmYWVjeHpkbXJuYWVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTE1MDQsImV4cCI6MjA5MjU2NzUwNH0._pGQQPdIQBqScSGbpMPGGm7pQPYkW2MbenKibTXkfAM';
+// ──────────────────────────────────────
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const COLS = [
+  { label: 'Написание ТЗ',       emoji: '✏️',  cls: 'col-0' },
+  { label: 'Согласование ТЗ',    emoji: '🔍',  cls: 'col-1' },
+  { label: 'У дизайнера',        emoji: '🎨',  cls: 'col-2' },
+  { label: 'Согласование',       emoji: '👁',  cls: 'col-3' },
+  { label: 'Правки от клиента',  emoji: '🔄',  cls: 'col-4' },
+  { label: 'Запущен',            emoji: '🚀',  cls: 'col-5' },
+];
+
+let currentUser = null;
+let currentProjectId = null;
+let currentProjectName = '';
+let projects = [];
+let cards = [];
+let editCardId = null;
+
+// ─── UTILS ───
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmt(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function showLoader(v) {
+  document.getElementById('loader').style.display = v ? 'flex' : 'none';
+}
+function showErr(msg) {
+  const el = document.getElementById('authErr');
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+
+// ─── AUTH ───
+let authMode = 'login';
+function switchTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t, i) => {
+    t.classList.toggle('active', (mode === 'login' && i === 0) || (mode === 'register' && i === 1));
+  });
+  document.getElementById('authBtn').textContent = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
+  showErr('');
+}
+async function doAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pwd   = document.getElementById('authPassword').value;
+  if (!email || !pwd) { showErr('Введите email и пароль'); return; }
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true;
+  showErr('');
+  let result;
+  if (authMode === 'login') {
+    result = await db.auth.signInWithPassword({ email, password: pwd });
+  } else {
+    result = await db.auth.signUp({ email, password: pwd });
+  }
+  btn.disabled = false;
+  if (result.error) {
+    const msg = result.error.message;
+    if (msg.includes('Invalid login')) showErr('Неверный email или пароль');
+    else if (msg.includes('already registered')) showErr('Этот email уже зарегистрирован');
+    else if (msg.includes('Password should')) showErr('Пароль должен быть не менее 6 символов');
+    else showErr(msg);
+    return;
+  }
+  if (authMode === 'register' && result.data?.user && !result.data.session) {
+    showErr('');
+    alert('Подтвердите email — мы отправили письмо на ' + email);
+    switchTab('login');
+    return;
+  }
+}
+async function logout() {
+  await db.auth.signOut();
+  currentUser = null; currentProjectId = null;
+  document.getElementById('mainWrap').style.display = 'none';
+  document.getElementById('authScreen').classList.add('active');
+}
+
+// ─── SESSION INIT ───
+async function init() {
+  showLoader(true);
+  const { data: { session } } = await db.auth.getSession();
+  showLoader(false);
+  if (session?.user) {
+    await onLogin(session.user);
+  } else {
+    document.getElementById('authScreen').classList.add('active');
+  }
+  db.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      document.getElementById('authScreen').classList.remove('active');
+      await onLogin(session.user);
+    }
+  });
+}
+async function onLogin(user) {
+  currentUser = user;
+  document.getElementById('topUser').textContent = user.email;
+  document.getElementById('mainWrap').style.display = 'block';
+  await showProjects();
+}
+
+// ─── PROJECTS ───
+async function loadProjects() {
+  const { data, error } = await db
+    .from('projects')
+    .select('*, creatives(count)')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return data || [];
+}
+
+async function showProjects() {
+  currentProjectId = null;
+  document.getElementById('topSep').style.display = 'none';
+  document.getElementById('topProject').style.display = 'none';
+  document.getElementById('projectsScreen').classList.add('active');
+  document.getElementById('boardScreen').classList.remove('active');
+
+  showLoader(true);
+  projects = await loadProjects();
+  showLoader(false);
+  renderProjects();
+}
+
+function renderProjects() {
+  const grid = document.getElementById('projectsGrid');
+  if (projects.length === 0) {
+    grid.innerHTML = '<div class="projects-empty">Нет проектов — создайте первый выше</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  projects.forEach((p, i) => {
+    const total = p.creatives?.[0]?.count ?? 0;
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.style.animationDelay = (i * 0.05) + 's';
+    card.innerHTML = `
+      <button class="project-card-del" onclick="event.stopPropagation();deleteProject('${p.id}')" title="Удалить проект">✕</button>
+      <div class="project-card-name">${esc(p.name)}</div>
+      <div class="project-card-meta">Создан ${fmt(p.created_at)}</div>
+      <div class="project-card-stats">
+        <span class="proj-stat proj-stat-total">Всего: ${total}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => openProject(p.id, p.name));
+    grid.appendChild(card);
+  });
+}
+
+async function addProject() {
+  const n = document.getElementById('newProjectName').value.trim();
+  if (!n) { document.getElementById('newProjectName').focus(); return; }
+  const { data, error } = await db
+    .from('projects')
+    .insert({ name: n, user_id: currentUser.id })
+    .select().single();
+  if (error) { toast('Ошибка: ' + error.message); return; }
+  document.getElementById('newProjectName').value = '';
+  projects.unshift(data);
+  renderProjects();
+  toast('Проект создан');
+}
+
+async function deleteProject(id) {
+  if (!confirm('Удалить проект и все его креативы?')) return;
+  await db.from('creatives').delete().eq('project_id', id);
+  await db.from('projects').delete().eq('id', id).eq('user_id', currentUser.id);
+  projects = projects.filter(p => p.id !== id);
+  renderProjects();
+  toast('Проект удалён');
+}
+
+document.getElementById('newProjectName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addProject();
+});
+
+// ─── BOARD ───
+async function openProject(id, name) {
+  currentProjectId = id;
+  currentProjectName = name;
+  document.getElementById('boardTitle').textContent = name;
+  document.getElementById('topProject').innerHTML = `<b>${esc(name)}</b>`;
+  document.getElementById('topSep').style.display = 'block';
+  document.getElementById('topProject').style.display = 'block';
+  document.getElementById('projectsScreen').classList.remove('active');
+  document.getElementById('boardScreen').classList.add('active');
+
+  showLoader(true);
+  await loadCards();
+  showLoader(false);
+  renderBoard();
+}
+
+async function loadCards() {
+  const { data, error } = await db
+    .from('creatives')
+    .select('*')
+    .eq('project_id', currentProjectId)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  cards = data || [];
+}
+
+async function addCard() {
+  const n = document.getElementById('newCardName').value.trim();
+  if (!n) { document.getElementById('newCardName').focus(); return; }
+  const { data, error } = await db
+    .from('creatives')
+    .insert({ name: n, status: 0, project_id: currentProjectId, user_id: currentUser.id })
+    .select().single();
+  if (error) { toast('Ошибка: ' + error.message); return; }
+  document.getElementById('newCardName').value = '';
+  cards.unshift(data);
+  renderBoard();
+  toast('Креатив добавлен');
+}
+
+document.getElementById('newCardName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addCard();
+});
+
+async function moveCard(id, dir) {
+  const c = cards.find(x => x.id === id);
+  if (!c) return;
+  const ns = c.status + dir;
+  if (ns < 0 || ns > 5) return;
+  const { error } = await db.from('creatives').update({ status: ns, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { toast('Ошибка обновления'); return; }
+  c.status = ns;
+  c.updated_at = new Date().toISOString();
+  renderBoard();
+}
+
+async function deleteCard(id) {
+  if (!confirm('Удалить этот креатив?')) return;
+  await db.from('creatives').delete().eq('id', id);
+  cards = cards.filter(x => x.id !== id);
+  renderBoard();
+  toast('Удалено');
+}
+
+function openModal(id) {
+  editCardId = id;
+  const c = cards.find(x => x.id === id);
+  document.getElementById('modalName').textContent = c.name;
+  document.getElementById('mName').value = c.name;
+  document.getElementById('mStatus').value = c.status;
+  document.getElementById('mLink').value = c.link || '';
+  document.getElementById('mComment').value = c.comment || '';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  editCardId = null;
+}
+function overlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+async function saveModal() {
+  if (!editCardId) return;
+  const c = cards.find(x => x.id === editCardId);
+  const newName = document.getElementById('mName').value.trim() || c.name;
+  const ns = parseInt(document.getElementById('mStatus').value);
+  const link = document.getElementById('mLink').value.trim();
+  const comment = document.getElementById('mComment').value.trim();
+  const upd = { name: newName, status: ns, link, comment, updated_at: new Date().toISOString() };
+  const { error } = await db.from('creatives').update(upd).eq('id', editCardId);
+  if (error) { toast('Ошибка сохранения'); return; }
+  Object.assign(c, upd);
+  renderBoard();
+  closeModal();
+  toast('Сохранено');
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const total = cards.length;
+  const done  = cards.filter(x => x.status === 5).length;
+  document.getElementById('boardStats').innerHTML = `
+    <span class="board-stat">Всего: <b>${total}</b></span>
+    <span class="board-stat">В работе: <b>${total - done}</b></span>
+    <span class="board-stat">Запущено: <b>${done}</b></span>
+  `;
+  COLS.forEach((col, ci) => {
+    const wrap = document.createElement('div');
+    wrap.className = `col ${col.cls}`;
+    const here = cards.filter(x => x.status === ci);
+    wrap.innerHTML = `
+      <div class="col-head">
+        <div class="col-accent"></div>
+        <div class="col-label">${col.emoji} ${col.label}</div>
+        <div class="col-count">${here.length}</div>
+      </div>
+      <div class="col-body" id="col-${ci}"></div>
+    `;
+    board.appendChild(wrap);
+    const body = wrap.querySelector(`#col-${ci}`);
+    if (!here.length) {
+      body.innerHTML = '<div class="empty-col">— пусто —</div>';
+      return;
+    }
+    here.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      let html = `<div class="card-name">${esc(c.name)}</div>`;
+      html += `<div class="card-date">обновлён ${fmt(c.updated_at || c.created_at)}</div>`;
+      if (c.comment) html += `<div class="card-comment">${esc(c.comment)}</div>`;
+      if (c.link) html += `<a class="card-link" href="${esc(c.link)}" target="_blank">🔗 Открыть</a>`;
+      html += `<div class="card-actions">`;
+      if (c.status > 0) html += `<button class="card-btn" onclick="moveCard('${c.id}',-1)">← Назад</button>`;
+      if (c.status < 5) html += `<button class="card-btn" onclick="moveCard('${c.id}',1)">Вперёд →</button>`;
+      html += `<button class="card-btn card-btn-edit" onclick="openModal('${c.id}')">✏ Изм.</button>`;
+      html += `<button class="card-btn card-btn-del" onclick="deleteCard('${c.id}')">✕</button>`;
+      html += `</div>`;
+      card.innerHTML = html;
+      body.appendChild(card);
+    });
+  });
+}
+
+init();
+</script>
+</body>
+</html>
